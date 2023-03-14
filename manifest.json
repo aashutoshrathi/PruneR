@@ -1,0 +1,27 @@
+{
+  "name": "Undependable",
+  "author": "Aashutosh Rathi",
+  "version": "0.0.1",
+  "manifest_version": 3,
+  "description": "Show/Hide your dependabot PRs",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "default_locale": "en",
+  "action": {
+    "default_icon": "icons/icon19.png",
+    "default_title": "Undependable"
+  },
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.github.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  }
+}
