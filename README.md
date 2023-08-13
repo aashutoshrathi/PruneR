@@ -21,7 +21,7 @@ Hence the name *P*rune*R*
 - Get it locally -
 
   ```sh
-  $ git clone https://github.com/aashutoshrathi/PruneR.git
+  git clone https://github.com/aashutoshrathi/PruneR.git
   ```
 
   **OR**
