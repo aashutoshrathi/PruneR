@@ -1,9 +1,14 @@
-# Undependable
+# PruneR
 
-Dependency management is hard and dependabot makes it easy. But it also floods PR list with a lot of PRs. This extension helps you toggle the visibility of dependabot PRs.
+[<img src="https://s3.ap-south-1.amazonaws.com/shared.aashutosh.dev/PruneR.svg" align="right" width="100">](https://aashutoshrathi.github.io/PruneR/)
 
-> **Note**
-> This is for very very lazy and my kinda people, who don't want to do anything manually.
+Dependency management is hard and dependabot like bots makes it easy. But it also floods PR list with a lot of PRs. This extension helps you toggle the visibility of such PRs.
+This reduces the clutter and you can focus on what you have to review.
+
+Hence the name *P*rune*R*
+
+> [!NOTE]  
+> This is for very<sup>3</sup> lazy and my kinda people, who don't want to do anything manually.
 
 <!-- ## Installation -->
 
@@ -16,12 +21,12 @@ Dependency management is hard and dependabot makes it easy. But it also floods P
 - Get it locally -
 
   ```sh
-  $ git clone https://github.com/aashutoshrathi/undependable.git
+  git clone https://github.com/aashutoshrathi/PruneR.git
   ```
 
   **OR**
 
-  Download the latest version here: [Undependable ✨](https://github.com/aashutoshrathi/undependable/archive/main.zip)
+  Download the latest version here: [PruneR ✨](https://github.com/aashutoshrathi/PruneR/archive/main.zip)
 
 - Go to `chrome://extensions/` & enable Developer Mode.
 - Click on Load Unpacked Extension and Open/Select the folder.
