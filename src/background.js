@@ -12,10 +12,6 @@ const getStateString = (state) => {
   return state ? "on" : "off";
 };
 
-const setState = (newState) => {
-  chrome.storage.sync.set({ state: newState });
-};
-
 const shouldExecuteOnTab = (host, pathname) => {
   return host === "github.com" && pathname.endsWith("/pulls");
 };
@@ -51,7 +47,7 @@ const getActiveTabState = async () => {
   Updates the state of current tab in storage and icon
 */
 const syncState = async (newState) => {
-  setState(newState);
+  chrome.storage.sync.set({ state: newState });
   const iconPath = `../icons/${getStateString(newState)}-icon.png`;
   chrome.action.setIcon({
     path: iconPath,
