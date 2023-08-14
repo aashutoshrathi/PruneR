@@ -16,6 +16,10 @@ Hence the name *P*rune*R*
 
 [<img src="https://raw.githubusercontent.com/alrra/browser-logos/90fdf03c/src/chrome/chrome.svg" width="48" alt="Chrome" valign="middle">][link-chrome] [<img valign="middle" src="https://img.shields.io/chrome-web-store/v/dmnfcgnmillpemklpladliejgigipcen.svg?label=%20">][link-chrome] and other Chromium browsers
 
+## Demo 🎥
+
+[![Walkthrough of PruneR](https://img.youtube.com/vi/R--YNMb8tNE/0.jpg)](https://www.youtube.com/watch?v=R--YNMb8tNE "PruneR Demo")
+
 ## Development
 
 - Get it locally -

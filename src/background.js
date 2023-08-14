@@ -76,6 +76,11 @@ chrome.action.onClicked.addListener(async (tab) => {
   syncState(newState);
 });
 
+chrome.tabs.onActivated.addListener(async () => {
+  const state = await getActiveTabState();
+  syncState(state);
+});
+
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab?.active) {
     const state = await getActiveTabState();
