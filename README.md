@@ -12,7 +12,7 @@ Hence the name *P*rune*R*
 
 ## Installation
 
-[link-chrome]: https://chrome.google.com/webstore/detail/mongo-ip-updater/dmnfcgnmillpemklpladliejgigipcen 'Version published on Chrome Web Store'
+[link-chrome]: https://chrome.google.com/webstore/detail/pruner/dmnfcgnmillpemklpladliejgigipcen 'Version published on Chrome Web Store'
 
 [<img src="https://raw.githubusercontent.com/alrra/browser-logos/90fdf03c/src/chrome/chrome.svg" width="48" alt="Chrome" valign="middle">][link-chrome] [<img valign="middle" src="https://img.shields.io/chrome-web-store/v/dmnfcgnmillpemklpladliejgigipcen.svg?label=%20">][link-chrome] and other Chromium browsers
 
