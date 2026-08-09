@@ -30,7 +30,7 @@ automatically checks the "Viewed" checkbox on:
 | Pattern | Examples |
 |---|---|
 | `*.test.{ts,tsx,js,jsx,mjs,cjs}` | `button.test.tsx` |
-| `*.spec.{ts,tsx,js,jsx,mjs,cjs}` | `utils.spec.js` |
+| `*.spec.{ts,tsx,js,jsx,mjs,cjs}` | `utils.spec.ts` |
 | `__tests__/` | `__tests__/foo.ts` |
 | `test/` or `tests/` | `test/setup.ts` |
 | `__mocks__/` | `__mocks__/fs.ts` |
@@ -41,6 +41,10 @@ automatically checks the "Viewed" checkbox on:
 
 These files are still visible in the diff — they're just marked "Viewed"
 so they collapse out of your review flow. Focus on the actual logic changes.
+
+> **Toggle on/off:** Right-click the PruneR icon in your toolbar and select
+> "Auto-mark test files as viewed" to enable or disable this feature.
+> A checkmark ✓ means it's active.
 
 ---
 
