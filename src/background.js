@@ -2,6 +2,7 @@ const MANIFEST = chrome.runtime.getManifest();
 
 const BASE_QUERY = "?q=is%3Apr+is%3Aopen+";
 const HIDE_DEPENDABOT_QUERY = "-label%3Adependencies+";
+const SEARCH_API_URL = "https://api.github.com/search/issues";
 
 const syncContextMenu = async () => {
   const { autoPrune } = await chrome.storage.sync.get("autoPrune");
@@ -15,11 +16,16 @@ const syncContextMenu = async () => {
 const onInstalled = async () => {
   chrome.storage.sync.set({ version: `v${MANIFEST.version}` });
 
-  // Create the context menu for auto-prune toggle
+  // Create the context menu for auto-prune toggle and options
   chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
     id: "auto-prune-toggle",
     title: "Auto-mark test files as viewed",
+    contexts: ["action"],
+  });
+  chrome.contextMenus.create({
+    id: "open-options",
+    title: "PruneR Options",
     contexts: ["action"],
   });
 
@@ -32,13 +38,23 @@ const onInstalled = async () => {
   await syncContextMenu();
 };
 
-// Listen for context menu clicks to toggle auto-prune
+// Listen for context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === "auto-prune-toggle") {
     const { autoPrune } = await chrome.storage.sync.get("autoPrune");
     const newVal = !autoPrune;
     await chrome.storage.sync.set({ autoPrune: newVal });
     await syncContextMenu();
+  } else if (info.menuItemId === "open-options") {
+    chrome.runtime.openOptionsPage();
+  }
+});
+
+// Keep the context menu title in sync when the option is changed on the
+// options page instead of the context menu.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && "autoPrune" in changes) {
+    syncContextMenu();
   }
 });
 
@@ -57,7 +73,7 @@ const getAdditionQuery = (search) => {
   return HIDE_DEPENDABOT_QUERY;
 };
 
-/* 
+/*
   Returns the state of the current tab
 */
 const getActiveTabState = async () => {
@@ -77,18 +93,67 @@ const getActiveTabState = async () => {
   return false;
 };
 
-/* 
+/*
+  Extracts the "owner/repo" pair out of a github.com URL.
+*/
+const getRepoFromUrl = (url) => {
+  const { host, pathname } = new URL(url);
+  if (host !== "github.com") {
+    return null;
+  }
+  const match = pathname.match(/^\/([^/]+)\/([^/]+)(?:\/|$)/);
+  return match ? `${match[1]}/${match[2]}` : null;
+};
+
+/*
+  Asks the GitHub Search API how many open PRs carry the `dependencies`
+  label (the ones PruneR hides). Falls back to null when the request fails,
+  e.g. on private repositories or transient network errors.
+*/
+const getHiddenPRCount = async (repo) => {
+  try {
+    const query = `repo:${repo}%20is:pr%20is:open%20label:dependencies`;
+    const res = await fetch(`${SEARCH_API_URL}?q=${query}&per_page=1`);
+    if (!res.ok) {
+      return null;
+    }
+    const { total_count } = await res.json();
+    return typeof total_count === "number" ? total_count : null;
+  } catch {
+    return null;
+  }
+};
+
+/*
+  Shows the number of hidden dependabot PRs as a badge on the toolbar icon
+  whenever the dependabot filter is active on the current tab.
+*/
+const syncBadge = async () => {
+  const { state, hiddenPRCount } = await chrome.storage.sync.get([
+    "state",
+    "hiddenPRCount",
+  ]);
+  const show = state && hiddenPRCount !== undefined && hiddenPRCount !== null;
+  chrome.action.setBadgeBackgroundColor({ color: "#6e7781" });
+  chrome.action.setBadgeText({ text: show ? String(hiddenPRCount) : "" });
+};
+
+/*
   Updates the state of current tab in storage and icon
 */
-const syncState = async (newState) => {
+const syncState = async (newState, hiddenPRCount = null) => {
   chrome.storage.sync.set({ state: newState });
+  if (hiddenPRCount !== null) {
+    chrome.storage.sync.set({ hiddenPRCount });
+  }
   const iconPath = `../icons/${getStateString(newState)}-icon.png`;
   chrome.action.setIcon({
     path: iconPath,
   });
+  await syncBadge();
 };
 
-/* 
+/*
   Applies or removes the query on the current tab
 */
 const prunePullRequests = async (tab, shouldPrune = false) => {
@@ -113,7 +178,15 @@ chrome.action.onClicked.addListener(async (tab) => {
   const state = await getActiveTabState();
   prunePullRequests(tab, state);
   const newState = !state;
-  syncState(newState);
+
+  let hiddenPRCount = null;
+  if (newState) {
+    const repo = getRepoFromUrl(tab.url);
+    if (repo) {
+      hiddenPRCount = await getHiddenPRCount(repo);
+    }
+  }
+  syncState(newState, hiddenPRCount);
 });
 
 chrome.tabs.onActivated.addListener(async () => {
