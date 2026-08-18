@@ -59,7 +59,9 @@ const getFilePath = (control) => {
   if (headerWrapper) {
     const anchor = headerWrapper.querySelector('a[href^="#diff-"]');
     const path = cleanPath(anchor?.textContent);
-    if (path) return path;
+    if (path) {
+      return path;
+    }
   }
 
   // Classic UI: walk up to the file header / file-tree item.
@@ -72,25 +74,35 @@ const getFilePath = (control) => {
     const dataPath =
       container.getAttribute("data-file-header-path") ||
       container.getAttribute("data-path");
-    if (dataPath) return dataPath;
+    if (dataPath) {
+      return dataPath;
+    }
 
     const titledEl = container.querySelector("a[title], span[title]");
-    if (titledEl?.getAttribute("title")) return titledEl.getAttribute("title");
+    if (titledEl?.getAttribute("title")) {
+      return titledEl.getAttribute("title");
+    }
 
     const infoEl = container.querySelector(
       ".file-info-text, [data-file-info-text]"
     );
-    if (infoEl?.textContent?.trim()) return infoEl.textContent.trim();
+    if (infoEl?.textContent?.trim()) {
+      return infoEl.textContent.trim();
+    }
   }
 
   // aria-label on the checkbox is often "Viewed: path/to/file.ts".
   const ariaLabel = control.getAttribute("aria-label");
   const match = ariaLabel?.match(/Viewed:\s*(.+)/i);
-  if (match) return match[1].trim();
+  if (match) {
+    return match[1].trim();
+  }
 
   if (container) {
     const link = container.querySelector("a");
-    if (link?.textContent?.trim()) return link.textContent.trim();
+    if (link?.textContent?.trim()) {
+      return link.textContent.trim();
+    }
   }
 
   return null;
@@ -143,12 +155,16 @@ const getViewedControls = () => {
  */
 const markTestFilesSeen = async () => {
   const { autoPrune } = await chrome.storage.sync.get(STORAGE_KEY);
-  if (autoPrune === false) return false;
+  if (autoPrune === false) {
+    return false;
+  }
 
   let marked = false;
   for (const { el, mark } of getViewedControls()) {
     const filePath = getFilePath(el);
-    if (!filePath || !isTestFile(filePath)) continue;
+    if (!filePath || !isTestFile(filePath)) {
+      continue;
+    }
 
     // Guard against the observer re-toggling before GitHub updates the
     // control's state asynchronously.

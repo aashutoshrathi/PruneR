@@ -106,7 +106,9 @@ const prunePullRequests = async (tab, shouldPrune = false) => {
 chrome.action.onClicked.addListener(async (tab) => {
   // Only ever touch the URL of the PR list page; leave every other page alone.
   const { host, pathname } = new URL(tab.url);
-  if (!shouldExecuteOnTab(host, pathname)) return;
+  if (!shouldExecuteOnTab(host, pathname)) {
+    return;
+  }
 
   const state = await getActiveTabState();
   prunePullRequests(tab, state);
