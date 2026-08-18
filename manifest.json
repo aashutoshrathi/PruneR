@@ -1,9 +1,9 @@
 {
   "name": "PruneR",
   "author": "Aashutosh Rathi",
-  "version": "0.0.4",
+  "version": "0.1.1",
   "manifest_version": 3,
-  "description": "Clear PR clutter to what you want to see",
+  "description": "Clear PR clutter and auto-dim test files so you focus on what matters",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -16,12 +16,20 @@
   },
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://*.github.com/*"
   ],
   "background": {
     "service_worker": "src/background.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*/*/pull/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
