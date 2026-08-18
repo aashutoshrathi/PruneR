@@ -1,7 +1,7 @@
 {
   "name": "PruneR",
   "author": "Aashutosh Rathi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "manifest_version": 3,
   "description": "Clear PR clutter and auto-dim test files so you focus on what matters",
   "icons": {
@@ -27,7 +27,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://github.com/*/*/pull/*/files"],
+      "matches": ["https://github.com/*/*/pull/*"],
       "js": ["src/content.js"],
       "run_at": "document_idle"
     }
