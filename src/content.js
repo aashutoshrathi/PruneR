@@ -5,198 +5,76 @@
  * gets its "Viewed" control automatically toggled on so it stops being noise
  * in your review queue.
  *
- * GitHub ships two diff experiences and PruneR supports both:
- *   • New React UI ("/pull/N/changes"): a <button aria-label="Not Viewed">.
- *   • Classic UI  ("/pull/N/files"):    an <input type="checkbox" name="viewed">.
+ * GitHub renders diffs lazily and (for large PRs) virtualizes them, so files
+ * stream into the DOM as you scroll. Instead of scanning the page once and
+ * hoping, a MutationObserver re-runs a scan every time the DOM changes and
+ * marks a control the moment its file is in the DOM, whether it mounted with
+ * the page or appeared a second ago. Once a path has been handled it is kept
+ * in a session set, so a virtualized row that gets unmounted and remounted
+ * (losing its DOM state) can never be clicked a second time and toggled back.
  *
- * The content script loads on every "/pull/*" page (the pages navigate
- * client-side, so we can't scope tightly to the diff URL) and a
- * MutationObserver re-runs as diffs stream in or the user switches tabs.
- * Checks the `autoPrune` storage flag so users can toggle the feature on/off
- * via the extension's context menu (right-click the toolbar icon).
+ * The heavy lifting (pattern matching, path resolution, state detection) lives
+ * in prune.js so it can be unit-tested; this file only wires it to the page.
  */
+"use strict";
 
 const STORAGE_KEY = "autoPrune";
 
-// Marks a control we've already handled so the MutationObserver doesn't
-// re-toggle it (clicking the new button is a toggle, not a set).
-const PROCESSED_ATTR = "data-pruner-marked";
+// Paths already marked this session — survives virtualized rows being torn
+// down and remounted, which would otherwise reset our attribute guard.
+const processedPaths = new Set();
 
-const TEST_FILE_PATTERNS = [
-  /\.test\.(ts|tsx|js|jsx|mjs|cjs)$/,
-  /\.spec\.(ts|tsx|js|jsx|mjs|cjs)$/,
-  /\/__tests__\//,
-  /\/test\//,
-  /\/tests\//,
-  /\/__mocks__\//,
-  /\/__fixtures__\//,
-  /\/__snapshots__\//,
-  /\.snap$/,
-  /\/storybook\//i,
-  /\.stories\.(ts|tsx|js|jsx)$/,
-  /\/mocks?\//i,
-  /\/fixtures?\//i,
-  /\/testing\//i,
-];
-
-const isTestFile = (filePath) =>
-  TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
-
-// GitHub pads file-path links with bidirectional/zero-width control chars so
-// the truncated middle renders nicely. Strip them before pattern matching.
-const cleanPath = (text) =>
-  (text || "").replace(/[‎‏‪-‮⁦-⁩]/g, "").trim();
+let scanTimer = null;
 
 /**
- * Try to extract a file path from a DOM element that contains a "Viewed"
- * control (either the new button or the classic checkbox). Returns null if
- * no path can be found.
+ * Mark all currently-in-the-DOM test files as "Viewed". Returns true if any
+ * file was marked.
  */
-const getFilePath = (control) => {
-  // New React UI: the diff header wraps the control and a link to the file
-  // anchor whose text is the full path.
-  const headerWrapper = control.closest("[data-diff-header-wrapper]");
-  if (headerWrapper) {
-    const anchor = headerWrapper.querySelector('a[href^="#diff-"]');
-    const path = cleanPath(anchor?.textContent);
-    if (path) {
-      return path;
-    }
-  }
-
-  // Classic UI: walk up to the file header / file-tree item.
-  const container =
-    control.closest(
-      '[data-file-header-path], [data-path], [data-testid="file-tree-list-item"], .file-header'
-    ) || control.parentElement;
-
-  if (container) {
-    const dataPath =
-      container.getAttribute("data-file-header-path") ||
-      container.getAttribute("data-path");
-    if (dataPath) {
-      return dataPath;
-    }
-
-    const titledEl = container.querySelector("a[title], span[title]");
-    if (titledEl?.getAttribute("title")) {
-      return titledEl.getAttribute("title");
-    }
-
-    const infoEl = container.querySelector(
-      ".file-info-text, [data-file-info-text]"
-    );
-    if (infoEl?.textContent?.trim()) {
-      return infoEl.textContent.trim();
-    }
-  }
-
-  // aria-label on the checkbox is often "Viewed: path/to/file.ts".
-  const ariaLabel = control.getAttribute("aria-label");
-  const match = ariaLabel?.match(/Viewed:\s*(.+)/i);
-  if (match) {
-    return match[1].trim();
-  }
-
-  if (container) {
-    const link = container.querySelector("a");
-    if (link?.textContent?.trim()) {
-      return link.textContent.trim();
-    }
-  }
-
-  return null;
-};
-
-/**
- * Collect the unmarked "Viewed" controls on the page from both UIs, each
- * paired with the action that marks it seen.
- */
-const getViewedControls = () => {
-  const controls = [];
-
-  // New UI: button that is currently "Not Viewed" (aria-pressed=false).
-  document
-    .querySelectorAll(
-      'button[aria-pressed="false"][aria-label="Not Viewed"]:not([' +
-        PROCESSED_ATTR +
-        "])"
-    )
-    .forEach((button) => controls.push({ el: button, mark: () => button.click() }));
-
-  // Classic UI: unchecked checkbox — set it and let React know via events.
-  document
-    .querySelectorAll(
-      'input[type="checkbox"][name="viewed"]:not(:checked):not([' +
-        PROCESSED_ATTR +
-        "])"
-    )
-    .forEach((checkbox) =>
-      controls.push({
-        el: checkbox,
-        mark: () => {
-          checkbox.checked = true;
-          checkbox.dispatchEvent(
-            new Event("input", { bubbles: true, cancelable: true })
-          );
-          checkbox.dispatchEvent(
-            new Event("change", { bubbles: true, cancelable: true })
-          );
-        },
-      })
-    );
-
-  return controls;
-};
-
-/**
- * Mark all test files as "Viewed" on the current page.
- * Returns true if any file was marked.
- */
-const markTestFilesSeen = async () => {
+const scan = async () => {
   const { autoPrune } = await chrome.storage.sync.get(STORAGE_KEY);
-  if (autoPrune === false) {
-    return false;
-  }
+  if (autoPrune === false) return false;
 
-  let marked = false;
-  for (const { el, mark } of getViewedControls()) {
-    const filePath = getFilePath(el);
-    if (!filePath || !isTestFile(filePath)) {
-      continue;
+  let marked = 0;
+  for (const action of window.PruneR.collectMarks(
+    document,
+    processedPaths
+  )) {
+    if (processedPaths.has(action.path)) continue;
+    if (action.container) {
+      action.container.setAttribute(window.PruneR.PROCESSED_ATTR, "1");
     }
-
-    // Guard against the observer re-toggling before GitHub updates the
-    // control's state asynchronously.
-    el.setAttribute(PROCESSED_ATTR, "1");
-    mark();
-    marked = true;
+    processedPaths.add(action.path);
+    action.mark();
+    marked++;
   }
-
-  return marked;
+  return marked > 0;
 };
 
 /**
- * Set up a MutationObserver that watches for new "Viewed" controls being
- * added to the page (diffs stream in lazily and tabs navigate client-side).
+ * Debounce scans: GitHub adds large DOM subtrees in single mutation batches
+ * and we don't want to rebuild the control list for every node of every batch.
  */
-const setupObserver = () => {
-  const observer = new MutationObserver(() => {
-    markTestFilesSeen();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // Also run once immediately in case the DOM is already ready.
-  markTestFilesSeen();
+const scheduleScan = () => {
+  if (scanTimer !== null) return;
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
+    scan().catch((err) => console.error("[PruneR]", err));
+  }, 150);
 };
 
-// Kick off as soon as the DOM is ready
+/**
+ * Kick off an immediate scan, then watch for new controls streaming in (tabs
+ * navigate client-side and diff rows mount lazily / as you scroll).
+ */
+const setup = () => {
+  scan().catch((err) => console.error("[PruneR]", err));
+
+  const observer = new MutationObserver(scheduleScan);
+  observer.observe(document.body, { childList: true, subtree: true });
+};
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", setupObserver);
+  document.addEventListener("DOMContentLoaded", setup);
 } else {
-  setupObserver();
+  setup();
 }

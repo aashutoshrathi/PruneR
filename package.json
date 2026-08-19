@@ -1,0 +1,13 @@
+{
+  "name": "pruner",
+  "version": "0.2.0",
+  "description": "Clear PR clutter and auto-dim test files so you focus on what matters",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}
