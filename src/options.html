@@ -208,14 +208,14 @@
     <div class="card">
       <div class="setting">
         <div class="text">
-          <h2>Auto-mark test files as viewed</h2>
+          <h2 id="autoPruneLabel">Auto-mark test files as viewed</h2>
           <p>
             Automatically check the "Viewed" box on test, snapshot, and mock
             files in PR diffs so they stay out of your review flow.
           </p>
         </div>
         <label class="switch">
-          <input type="checkbox" id="autoPrune" />
+          <input type="checkbox" id="autoPrune" aria-labelledby="autoPruneLabel" />
           <span class="slider"></span>
         </label>
       </div>
@@ -233,7 +233,7 @@
     </div>
 
     <footer>
-      <a href="https://github.com/aashutoshrathi/PruneR" target="_blank">
+      <a href="https://github.com/aashutoshrathi/PruneR" target="_blank" rel="noopener noreferrer">
         PruneR on GitHub
       </a>
     </footer>

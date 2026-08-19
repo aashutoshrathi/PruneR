@@ -18,4 +18,12 @@ elements.autoPrune.addEventListener("change", async () => {
   await chrome.storage.sync.set({ [STORAGE_KEY]: autoPrune });
 });
 
+// Keep the toggle in sync when autoPrune is changed elsewhere, e.g. via the
+// toolbar context menu while the options page is open.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && STORAGE_KEY in changes) {
+    elements.autoPrune.checked = changes[STORAGE_KEY].newValue !== false;
+  }
+});
+
 init();

@@ -104,11 +104,54 @@ test("clicking the toolbar icon on a non-PR-list page does nothing", async () =>
 });
 
 test("tabs.onUpdated keeps state and badge in sync with the active tab", async () => {
-  const { mock } = await loadBackground({ activeTabUrl: PRS_URL + "?" + HIDE + "+" });
-  mock.fire("tabs.onUpdated", 1, { status: "complete" }, { active: true });
+  const filtered = PRS_URL + "?" + HIDE + "+";
+  const { mock } = await loadBackground({ activeTabUrl: filtered });
+  mock.fire("tabs.onUpdated", 1, { status: "complete" }, { active: true, url: filtered });
 
   await waitFor(() => mock.storage.state === true);
   assert.equal(mock.storage.state, true);
+  assert.equal(mock.storage.hiddenPRCount, 3);
+  assert.equal(mock.calls.badgeText, "3");
+});
+
+test("tabs.onUpdated ignores non-complete or non-active updates", async () => {
+  const { mock } = await loadBackground({ storage: { state: false } });
+  mock.fire("tabs.onUpdated", 1, { status: "loading" }, { active: true });
+  mock.fire("tabs.onUpdated", 1, { status: "complete" }, { active: false });
+
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(mock.storage.state, false);
+});
+
+test("tabs.onActivated recomputes the badge for the newly active tab", async () => {
+  const { mock } = await loadBackground({ activeTabUrl: PRS_URL + "?" + HIDE + "+" });
+  await mock.fireAsync("tabs.onActivated", { tabId: 1 });
+
+  assert.equal(mock.storage.state, true);
+  assert.equal(mock.storage.hiddenPRCount, 3);
+  assert.equal(mock.calls.badgeText, "3");
+});
+
+test("an inactive, filtered tab is not fetched for a badge count", async () => {
+  const { mock } = await loadBackground({ activeTabUrl: REPO_URL });
+  await mock.fireAsync("tabs.onActivated", { tabId: 1 });
+
+  assert.equal(mock.storage.state, false);
+  assert.equal(mock.storage.hiddenPRCount, null);
+  assert.equal(mock.calls.badgeText, "");
+});
+
+test("turning the filter off clears the stored badge count", async () => {
+  const filtered = PRS_URL + "?" + HIDE + "+";
+  const { mock } = await loadBackground({
+    storage: { state: true, hiddenPRCount: 3 },
+    activeTabUrl: filtered,
+  });
+  await mock.fireAsync("action.onClicked", { id: 1, url: filtered });
+
+  assert.equal(mock.storage.state, false);
+  assert.equal(mock.storage.hiddenPRCount, null);
+  assert.equal(mock.calls.badgeText, "");
 });
 
 test("more complex page that is not the PR list is ignored", async () => {

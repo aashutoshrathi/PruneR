@@ -82,15 +82,36 @@ const getActiveTabState = async () => {
     currentWindow: true,
   });
 
-  if (!activeTab?.url) {
-    return false;
-  }
+  return activeTab?.url ? stateForUrl(activeTab.url) : false;
+};
 
-  const { search, host, pathname } = new URL(activeTab.url);
+/*
+  Whether a GitHub URL currently has the dependency filter applied.
+*/
+const stateForUrl = (url) => {
+  if (!url) return false;
+  const { search, host, pathname } = new URL(url);
   if (shouldExecuteOnTab(host, pathname)) {
     return search.includes(HIDE_DEPENDABOT_QUERY);
   }
   return false;
+};
+
+/*
+  Recomputes the hidden dependency PR count for the given tab and syncs the
+  badge/icon with its filter state. Re-fetching on every tab switch/navigation
+  keeps the badge accurate for the repo that is actually active.
+*/
+const refreshBadge = async (url) => {
+  const state = stateForUrl(url);
+  let hiddenPRCount = null;
+  if (state) {
+    const repo = getRepoFromUrl(url);
+    if (repo) {
+      hiddenPRCount = await getHiddenPRCount(repo);
+    }
+  }
+  await syncState(state, hiddenPRCount);
 };
 
 /*
@@ -142,12 +163,12 @@ const syncBadge = async () => {
   Updates the state of current tab in storage and icon
 */
 const syncState = async (newState, hiddenPRCount = null) => {
-  chrome.storage.sync.set({ state: newState });
-  if (hiddenPRCount !== null) {
-    chrome.storage.sync.set({ hiddenPRCount });
-  }
+  // Write both keys together and await so `syncBadge()` never reads stale
+  // values. Writing `hiddenPRCount` unconditionally also clears a previously
+  // fetched count when the filter is turned off or the fetch fails.
+  await chrome.storage.sync.set({ state: newState, hiddenPRCount });
   const iconPath = `../icons/${getStateString(newState)}-icon.png`;
-  chrome.action.setIcon({
+  await chrome.action.setIcon({
     path: iconPath,
   });
   await syncBadge();
@@ -186,18 +207,20 @@ chrome.action.onClicked.addListener(async (tab) => {
       hiddenPRCount = await getHiddenPRCount(repo);
     }
   }
-  syncState(newState, hiddenPRCount);
+  await syncState(newState, hiddenPRCount);
 });
 
 chrome.tabs.onActivated.addListener(async () => {
-  const state = await getActiveTabState();
-  syncState(state);
+  const [activeTab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  await refreshBadge(activeTab?.url);
 });
 
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab?.active) {
-    const state = await getActiveTabState();
-    syncState(state);
+    await refreshBadge(tab.url);
   }
 });
 

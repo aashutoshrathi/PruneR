@@ -61,3 +61,14 @@ test("toggling the checkbox persists autoPrune to storage", async () => {
   await waitFor(() => mock.storage.autoPrune === false);
   assert.equal(mock.storage.autoPrune, false);
 });
+
+test("an external autoPrune change stays in sync with the toggle", async () => {
+  const { window, mock } = await loadOptions({ autoPrune: true });
+
+  await mock.chrome.storage.sync.set({ autoPrune: false });
+
+  await waitFor(
+    () => window.document.getElementById("autoPrune").checked === false
+  );
+  assert.equal(window.document.getElementById("autoPrune").checked, false);
+});
