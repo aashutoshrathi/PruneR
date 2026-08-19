@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PruneR Options</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #24292f;
+      --muted: #57606a;
+      --border: #d0d7de;
+      --accent: #1f883d;
+      --accent-hover: #1a7f37;
+      --switch-bg: #d0d7de;
+      --card-bg: #f6f8fa;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #f0f6fc;
+        --muted: #9198a1;
+        --border: #30363d;
+        --accent: #238636;
+        --accent-hover: #2ea043;
+        --switch-bg: #484f58;
+        --card-bg: #161b22;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
+        Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    header img {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+    }
+
+    header p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: var(--card-bg);
+    }
+
+    .setting {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .setting .text {
+      flex: 1;
+    }
+
+    .setting h2 {
+      font-size: 15px;
+      margin: 0 0 4px;
+    }
+
+    .setting p {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.45;
+    }
+
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--switch-bg);
+      border-radius: 24px;
+      transition: background 0.15s ease;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.15s ease;
+    }
+
+    .switch input:checked + .slider {
+      background: var(--accent);
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    .switch input:focus-visible + .slider {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .blurb {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .blurb code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge-demo {
+      display: inline-block;
+      min-width: 20px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: #6e7781;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      margin-left: 2px;
+      vertical-align: middle;
+    }
+
+    footer {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="../icons/icon48.png" alt="PruneR logo" />
+      <div>
+        <h1>PruneR</h1>
+        <p id="version">v0.0.0</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="setting">
+        <div class="text">
+          <h2 id="autoPruneLabel">Auto-mark test files as viewed</h2>
+          <p>
+            Automatically check the "Viewed" box on test, snapshot, and mock
+            files in PR diffs so they stay out of your review flow.
+          </p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoPrune" aria-labelledby="autoPruneLabel" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size: 15px; margin: 0 0 4px">Hide dependency PRs</h2>
+      <p class="blurb">
+        Click the PruneR toolbar icon on a
+        <code>&lt;owner&gt;/&lt;repo&gt;/pulls</code> page to toggle the
+        <code>-label:dependencies</code> filter. When active, the icon shows a
+        badge <span class="badge-demo">12</span> with the number of open
+        dependabot / dependency PRs currently hidden.
+      </p>
+    </div>
+
+    <footer>
+      <a href="https://github.com/aashutoshrathi/PruneR" target="_blank" rel="noopener noreferrer">
+        PruneR on GitHub
+      </a>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

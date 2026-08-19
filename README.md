@@ -22,6 +22,11 @@ Click the PruneR icon in your toolbar while you're on a GitHub PR list page
 (`https://github.com/org/repo/pulls`). It adds `-label:dependencies` to the URL,
 hiding all dependabot / dependency PRs in one click. Click again to show them.
 
+While the filter is active, the icon shows a **badge with the number of open
+dependency PRs currently hidden**, so you always know what's being pruned.
+(The count comes from the GitHub Search API and may not appear on private
+repositories.)
+
 ### 2. Auto-mark test files as viewed
 
 When you open a PR's **Files changed** tab (`/pull/*/files`), PruneR
@@ -45,6 +50,10 @@ so they collapse out of your review flow. Focus on the actual logic changes.
 > **Toggle on/off:** Right-click the PruneR icon in your toolbar and select
 > "Auto-mark test files as viewed" to enable or disable this feature.
 > A checkmark ✓ means it's active.
+>
+> Prefer a UI? Open **PruneR Options** — right-click the toolbar icon and pick
+> "PruneR Options", or find it under `chrome://extensions/` → PruneR → Details →
+> Extension options.
 
 ---
 
