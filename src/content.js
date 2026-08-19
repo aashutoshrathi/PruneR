@@ -25,12 +25,56 @@ const STORAGE_KEY = "autoPrune";
 const processedPaths = new Set();
 
 let scanTimer = null;
+let observer = null;
+
+/**
+ * A content script keeps running after its extension is reloaded, updated, or
+ * disabled (common during development), but its `chrome.*` handles are now
+ * dead — any call throws "Extension context invalidated". `chrome.runtime.id`
+ * goes undefined at the same moment, so it's a cheap way to spot the orphan.
+ */
+const isExtensionContextValid = () => Boolean(chrome.runtime?.id);
+
+/**
+ * Stop all page activity. Called once the extension context is gone so we
+ * don't loop on a broken context for every DOM mutation.
+ */
+const teardown = () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+  if (scanTimer !== null) {
+    clearTimeout(scanTimer);
+    scanTimer = null;
+  }
+};
+
+/**
+ * A scan may fail because the extension was reloaded out from under us; that's
+ * expected, so tear down quietly instead of spamming the console. Anything
+ * else is a real bug and gets logged.
+ */
+const handleScanError = (err) => {
+  if (
+    !isExtensionContextValid() ||
+    /Extension context invalidated/.test(err?.message)
+  ) {
+    teardown();
+    return;
+  }
+  console.error("[PruneR]", err);
+};
 
 /**
  * Mark all currently-in-the-DOM test files as "Viewed". Returns true if any
  * file was marked.
  */
 const scan = async () => {
+  if (!isExtensionContextValid()) {
+    teardown();
+    return false;
+  }
   const { autoPrune } = await chrome.storage.sync.get(STORAGE_KEY);
   if (autoPrune === false) return false;
 
@@ -58,7 +102,7 @@ const scheduleScan = () => {
   if (scanTimer !== null) return;
   scanTimer = setTimeout(() => {
     scanTimer = null;
-    scan().catch((err) => console.error("[PruneR]", err));
+    scan().catch(handleScanError);
   }, 150);
 };
 
@@ -67,9 +111,9 @@ const scheduleScan = () => {
  * navigate client-side and diff rows mount lazily / as you scroll).
  */
 const setup = () => {
-  scan().catch((err) => console.error("[PruneR]", err));
+  scan().catch(handleScanError);
 
-  const observer = new MutationObserver(scheduleScan);
+  observer = new MutationObserver(scheduleScan);
   observer.observe(document.body, { childList: true, subtree: true });
 };
 

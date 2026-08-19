@@ -31,6 +31,7 @@ const htmlTreeItem = (path) =>
   `<a data-testid="file-tree-list-item" href="#${anchorIdFor(path)}" title="${path}">${path}</a>`;
 
 const makeContentChrome = ({ autoPrune = true } = {}) => ({
+  runtime: { id: "test-extension-id" },
   storage: {
     sync: {
       get: async (key) => ({ [key]: autoPrune }),
@@ -196,6 +197,50 @@ test("does not re-toggle a marked file after a virtualized row is remounted", as
     window.__clicks.length,
     clicksAfterFirst,
     "remount must not click the already-marked file again"
+  );
+});
+
+test("does nothing when the extension context is already invalidated", async () => {
+  const chrome = makeContentChrome();
+  // A content script orphaned by an extension reload has no runtime.id.
+  chrome.runtime.id = undefined;
+
+  const window = loadPageWith({
+    body: htmlNewFile("src/App.test.tsx"),
+    chrome,
+  });
+
+  await tick(250);
+  assert.equal(window.__clicks.length, 0);
+});
+
+test("stops scanning once the extension context is invalidated mid-session", async () => {
+  const chrome = makeContentChrome();
+  const window = loadPageWith({
+    body: htmlNewFile("src/first.test.ts"),
+    chrome,
+  });
+
+  await waitFor(() => window.__clicks.length >= 1);
+  const clicksAfterFirst = window.__clicks.length;
+
+  // The extension is reloaded out from under the page: runtime.id goes away
+  // and every chrome.* call now throws.
+  chrome.runtime.id = undefined;
+  chrome.storage.sync.get = async () => {
+    throw new Error("Extension context invalidated.");
+  };
+
+  // A new diff row mounts, which would normally trigger a scan.
+  const temp = window.document.createElement("div");
+  temp.innerHTML = htmlNewFile("src/second.test.ts");
+  window.document.body.appendChild(temp.firstElementChild);
+
+  await tick(250);
+  assert.equal(
+    window.__clicks.length,
+    clicksAfterFirst,
+    "an invalidated context must not keep scanning"
   );
 });
 
